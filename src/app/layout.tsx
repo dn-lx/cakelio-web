@@ -4,6 +4,11 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Cakelio — Design your cake. Find your baker.",
   description: "Design custom cakes, discover suitable bakers, compare quotes and manage your order in one place.",
+  icons: {
+    icon: "/brand/03-cakelio-icon.svg",
+    shortcut: "/brand/03-cakelio-icon.svg",
+    apple: "/brand/03-cakelio-icon.svg",
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

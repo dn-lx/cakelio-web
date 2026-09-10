@@ -9,10 +9,11 @@ export function Nav() {
         <nav className="navLinks" aria-label="Main navigation">
           <Link href="/studio">Cake Studio</Link>
           <Link href="/bakers">Find bakers</Link>
+          <Link href="/messages">Messages</Link>
           <Link href="/for-bakers">For bakers</Link>
         </nav>
         <div className="navActions">
-          <Link className="button buttonGhost" href="/auth">Sign in</Link>
+          <Link className="button buttonGhost" href="/account">Account</Link>
           <Link className="button buttonPrimary navCreate" href="/studio">Create a cake</Link>
         </div>
       </div>

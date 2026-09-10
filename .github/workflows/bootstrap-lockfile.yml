@@ -2,6 +2,10 @@ name: Dependency lock and build validation
 
 on:
   push:
+    branches:
+      - main
+      - 'release/**'
+  pull_request:
     branches: [main]
 
 permissions:
@@ -28,6 +32,7 @@ jobs:
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_1IJENqECdJNvRxN-vUup5w_3dV8d4Ws
         run: npm run build
       - name: Commit lockfile if changed
+        if: github.event_name == 'push'
         run: |
           if git diff --quiet -- package-lock.json && git ls-files --error-unmatch package-lock.json >/dev/null 2>&1; then
             echo "package-lock.json already up to date"
