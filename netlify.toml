@@ -2,6 +2,7 @@
   command = "npm run build"
   # Netlify ignore commands return 0 to skip a build and 1 to continue.
   # Validate release branches in GitHub Actions; only main should consume a Netlify build.
+  # Deployment refresh: rebuild after secure Stripe and Supabase server variables were configured.
   ignore = "if [ \"$BRANCH\" != \"main\" ]; then exit 0; else exit 1; fi"
 
 [build.environment]
