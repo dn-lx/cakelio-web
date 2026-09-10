@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="180" viewBox="0 0 720 180" role="img" aria-label="Cakelio">
+  <rect width="180" height="180" rx="54" fill="#352620"/>
+  <path d="M55 84c0-20 16-36 36-36s36 16 36 36" fill="none" stroke="#FFF8F2" stroke-width="10" stroke-linecap="round"/>
+  <path d="M51 84h80v36c0 11-9 20-20 20H71c-11 0-20-9-20-20z" fill="none" stroke="#FFF8F2" stroke-width="10" stroke-linejoin="round"/>
+  <path d="M91 48V30" stroke="#F1D2C7" stroke-width="9" stroke-linecap="round"/><circle cx="91" cy="26" r="6" fill="#B65C42"/>
+  <text x="214" y="116" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="90" font-weight="800" letter-spacing="-5" fill="#352620">cakelio</text>
+</svg>
