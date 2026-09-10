@@ -3,4 +3,81 @@ import type Stripe from "stripe";
 import { createClient } from "@/lib/supabase/server";
 import { getStripeClient } from "@/lib/stripe";
 
-export async function POST(request:Request){try{const supabase=await createClient();const {data:claims}=await supabase.auth.getClaims();const userId=claims?.claims?.sub;if(!userId)return NextResponse.json({error:"Authentication required."},{status:401});const {orderId}=await request.json() as {orderId?:string};if(!orderId)return NextResponse.json({error:"Missing order."},{status:400});const {data:order,error}=await supabase.from("orders").select("id,customer_id,provider_id,total,currency,amount_paid,payment_status,status,quote_id").eq("id",orderId).eq("customer_id",userId).maybeSingle();if(error||!order)return NextResponse.json({error:"Order not found."},{status:404});if(order.payment_status==="paid")return NextResponse.json({error:"This order is already paid."},{status:400});const {data:quote}=await supabase.from("quotes").select("deposit_amount").eq("id",order.quote_id).maybeSingle();const remaining=Math.max(0,Number(order.total)-Number(order.amount_paid||0));const depositDue=Number(order.amount_paid||0)===0&&Number(quote?.deposit_amount||0)>0?Number(quote?.deposit_amount):null;const amount=depositDue||remaining;if(amount<=0)return NextResponse.json({error:"No payment is due."},{status:400});const origin=new URL(request.url).origin;const stripe=getStripeClient();const params:Stripe.Checkout.SessionCreateParams & {integration_identifier?:string}={mode:"payment",line_items:[{quantity:1,price_data:{currency:String(order.currency||"EUR").toLowerCase(),unit_amount:Math.round(amount*100),product_data:{name:depositDue?"Cakelio cake order deposit":"Cakelio cake order payment",description:`Order ${order.id.slice(0,8)}`}}}],success_url:`${origin}/account?payment=success`,cancel_url:`${origin}/account?payment=cancelled`,client_reference_id:order.id,metadata:{order_id:order.id,customer_id:userId,provider_id:order.provider_id,payment_kind:depositDue?"deposit":remaining<Number(order.total)?"balance":"full"},integration_identifier:"cakelio_checkout_mnqstuvw"};const session=await stripe.checkout.sessions.create(params);return NextResponse.json({url:session.url});}catch(error){return NextResponse.json({error:error instanceof Error?error.message:"Unable to start Stripe Checkout."},{status:503})}}
+export async function POST(request: Request) {
+  if (process.env.STRIPE_PAYMENTS_ENABLED !== "true") {
+    return NextResponse.json(
+      { error: "Cakelio payments are not enabled yet." },
+      { status: 503 },
+    );
+  }
+
+  try {
+    const supabase = await createClient();
+    const { data: claims } = await supabase.auth.getClaims();
+    const userId = claims?.claims?.sub;
+    if (!userId) return NextResponse.json({ error: "Authentication required." }, { status: 401 });
+
+    const { orderId } = await request.json() as { orderId?: string };
+    if (!orderId) return NextResponse.json({ error: "Missing order." }, { status: 400 });
+
+    const { data: order, error } = await supabase
+      .from("orders")
+      .select("id,customer_id,provider_id,total,currency,amount_paid,payment_status,status,quote_id")
+      .eq("id", orderId)
+      .eq("customer_id", userId)
+      .maybeSingle();
+
+    if (error || !order) return NextResponse.json({ error: "Order not found." }, { status: 404 });
+    if (order.payment_status === "paid") {
+      return NextResponse.json({ error: "This order is already paid." }, { status: 400 });
+    }
+
+    const { data: quote } = await supabase
+      .from("quotes")
+      .select("deposit_amount")
+      .eq("id", order.quote_id)
+      .maybeSingle();
+
+    const remaining = Math.max(0, Number(order.total) - Number(order.amount_paid || 0));
+    const depositDue = Number(order.amount_paid || 0) === 0 && Number(quote?.deposit_amount || 0) > 0
+      ? Number(quote?.deposit_amount)
+      : null;
+    const amount = depositDue || remaining;
+    if (amount <= 0) return NextResponse.json({ error: "No payment is due." }, { status: 400 });
+
+    const origin = new URL(request.url).origin;
+    const stripe = getStripeClient();
+    const params: Stripe.Checkout.SessionCreateParams & { integration_identifier?: string } = {
+      mode: "payment",
+      line_items: [{
+        quantity: 1,
+        price_data: {
+          currency: String(order.currency || "EUR").toLowerCase(),
+          unit_amount: Math.round(amount * 100),
+          product_data: {
+            name: depositDue ? "Cakelio cake order deposit" : "Cakelio cake order payment",
+            description: `Order ${order.id.slice(0, 8)}`,
+          },
+        },
+      }],
+      success_url: `${origin}/account?payment=success`,
+      cancel_url: `${origin}/account?payment=cancelled`,
+      client_reference_id: order.id,
+      metadata: {
+        order_id: order.id,
+        customer_id: userId,
+        provider_id: order.provider_id,
+        payment_kind: depositDue ? "deposit" : remaining < Number(order.total) ? "balance" : "full",
+      },
+      integration_identifier: "cakelio_checkout_mnqstuvw",
+    };
+
+    const session = await stripe.checkout.sessions.create(params);
+    return NextResponse.json({ url: session.url });
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Unable to start Stripe Checkout." },
+      { status: 503 },
+    );
+  }
+}
