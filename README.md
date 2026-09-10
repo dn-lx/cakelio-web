@@ -3,14 +3,15 @@
 Main customer and baker web application for **Cakelio** — a custom-cake marketplace and cake design studio.
 
 ## Stack
-- Next.js 16.3.3
-- React 19.2
-- TypeScript
+- Next.js 16.3.3 / React 19.2 / TypeScript
+- Supabase Auth + Postgres + Storage
+- `@supabase/ssr` cookie-based server/browser clients
 - Netlify deployment
-- Shared Cakelio design system
 
-## Product direction
-Cakelio lets customers design a cake, find suitable bakers, request quotes, communicate, and manage an order. Bakers get structured requests instead of fragmented DMs.
+## Supabase
+Cakelio uses its own project (`wbqnctrvxohxwiaignhg`, EU Central). It is intentionally separate from every FrankiFlow/FrankiHolz backend.
+
+Create `.env.local` from `.env.example` and set the Cakelio **publishable** key. Never add secret/service-role keys to browser environment variables or source control.
 
 ## Development
 ```bash
@@ -18,8 +19,10 @@ npm install
 npm run dev
 ```
 
-## Deployment
-Netlify should be connected to this repository and deploy the `main` branch automatically.
+## Current status
+- Public marketplace shell and interactive Cake Studio
+- Customer/provider email + password signup/signin
+- SSR session refresh and protected `/account` route
+- Cakelio database foundation with RLS and Storage buckets
 
-## Status
-Phase 1: public website + interactive Cake Studio prototype.
+Next: provider onboarding, persistent Cake Studio designs and database-backed baker discovery.

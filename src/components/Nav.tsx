@@ -12,7 +12,7 @@ export function Nav() {
           <Link href="/for-bakers">For bakers</Link>
         </nav>
         <div className="navActions">
-          <button className="button buttonGhost" type="button">Sign in</button>
+          <Link className="button buttonGhost" href="/auth">Sign in</Link>
           <Link className="button buttonPrimary navCreate" href="/studio">Create a cake</Link>
         </div>
       </div>
