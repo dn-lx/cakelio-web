@@ -1,0 +1,58 @@
+"use client";
+
+import Link from "next/link";
+import { useMemo, useState } from "react";
+import { CakeVisual } from "@/components/CakeVisual";
+import { Footer } from "@/components/Footer";
+import { Nav } from "@/components/Nav";
+
+const sizes = [
+  { label: "15 cm", serves: "6–8", add: 0 },
+  { label: "20 cm", serves: "12–16", add: 14 },
+  { label: "25 cm", serves: "20–24", add: 29 },
+  { label: "30 cm", serves: "28–34", add: 46 },
+];
+const flavours = [{ label: "Vanilla", add: 0 }, { label: "Chocolate", add: 5 }, { label: "Red velvet", add: 7 }, { label: "Lemon", add: 4 }];
+const fillings = [{ label: "Vanilla cream", add: 0 }, { label: "Strawberry", add: 4 }, { label: "Chocolate ganache", add: 6 }, { label: "Passion fruit", add: 6 }];
+const decorations = [{ label: "Berries", add: 7 }, { label: "Flowers", add: 13 }, { label: "Gold", add: 10 }, { label: "Minimal", add: 0 }];
+
+export default function StudioPage() {
+  const [size, setSize] = useState(sizes[1]);
+  const [flavour, setFlavour] = useState(flavours[1]);
+  const [filling, setFilling] = useState(fillings[1]);
+  const [frosting, setFrosting] = useState("Blush");
+  const [decoration, setDecoration] = useState(decorations[0]);
+  const [tiers, setTiers] = useState(1);
+  const [message, setMessage] = useState("happy birthday");
+
+  const price = useMemo(() => 42 + size.add + flavour.add + filling.add + decoration.add + (tiers - 1) * 24, [size, flavour, filling, decoration, tiers]);
+
+  return (
+    <main><Nav />
+      <section className="studioPage shell">
+        <div className="studioIntro"><span className="eyebrow">CAKELIO STUDIO · PROTOTYPE</span><h1>Build the cake in your head.</h1><p>This first prototype turns the important choices into one structured cake brief. The next versions will add baker-specific options, saved designs and photo references.</p></div>
+        <div className="studioWorkspace">
+          <aside className="studioControls">
+            <Control title="Size" subtitle={`${size.serves} servings`} options={sizes.map(x => x.label)} value={size.label} onChange={(value) => setSize(sizes.find(x => x.label === value)!)} />
+            <Control title="Flavour" options={flavours.map(x => x.label)} value={flavour.label} onChange={(value) => setFlavour(flavours.find(x => x.label === value)!)} />
+            <Control title="Filling" options={fillings.map(x => x.label)} value={filling.label} onChange={(value) => setFilling(fillings.find(x => x.label === value)!)} />
+            <Control title="Finish colour" options={["Vanilla", "Blush", "Sage", "Chocolate", "Lemon"]} value={frosting} onChange={setFrosting} />
+            <Control title="Decoration" options={decorations.map(x => x.label)} value={decoration.label} onChange={(value) => setDecoration(decorations.find(x => x.label === value)!)} />
+            <div className="controlGroup"><div className="controlLabel"><strong>Tiers</strong><small>Start simple; baker limits come later.</small></div><div className="segmented">{[1,2].map(value => <button type="button" className={tiers === value ? "active" : ""} onClick={() => setTiers(value)} key={value}>{value}</button>)}</div></div>
+            <label className="controlGroup"><span className="controlLabel"><strong>Cake message</strong><small>Shown in the preview</small></span><input className="messageInput" maxLength={28} value={message} onChange={(e) => setMessage(e.target.value)} /></label>
+          </aside>
+          <div className="studioCanvasWrap">
+            <div className="studioCanvasHeader"><div><span>Your design</span><small>Interactive preview</small></div><button type="button">♡ Save</button></div>
+            <CakeVisual frosting={frosting} tiers={tiers} decoration={decoration.label} message={message} />
+            <div className="designSummary"><span>{size.label}</span><span>{flavour.label}</span><span>{filling.label}</span><span>{frosting}</span><span>{decoration.label}</span></div>
+            <div className="studioQuote"><div><small>Early estimate</small><strong>€{price}–€{price + 18}</strong><p>Final price is set by the baker.</p></div><Link className="button buttonPrimary" href="/bakers">Find bakers for this cake</Link></div>
+          </div>
+        </div>
+      </section><Footer />
+    </main>
+  );
+}
+
+function Control({ title, subtitle, options, value, onChange }: { title: string; subtitle?: string; options: string[]; value: string; onChange: (value: string) => void }) {
+  return <div className="controlGroup"><div className="controlLabel"><strong>{title}</strong>{subtitle && <small>{subtitle}</small>}</div><div className="choiceGrid">{options.map(option => <button type="button" className={value === option ? "active" : ""} onClick={() => onChange(option)} key={option}>{option}</button>)}</div></div>;
+}
