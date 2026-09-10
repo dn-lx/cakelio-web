@@ -15,42 +15,60 @@ jobs:
     env:
       BASE_URL: https://cakelio.netlify.app
     steps:
-      - name: Public pages respond successfully
+      - name: Run production checks
         shell: bash
         run: |
-          set -euo pipefail
+          set +e
+          report="$RUNNER_TEMP/cakelio-smoke-report.txt"
+          fail=0
+          : > "$report"
+
+          echo "Cakelio production smoke test" >> "$report"
+          echo "UTC: $(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$report"
+          echo >> "$report"
+
           for path in / /auth /bakers; do
-            code=$(curl -L -sS -o /tmp/page -w "%{http_code}" "$BASE_URL$path")
-            echo "$path -> HTTP $code"
-            test "$code" -ge 200
-            test "$code" -lt 400
+            body="$RUNNER_TEMP/page.txt"
+            code=$(curl -L -sS -o "$body" -w "%{http_code}" "$BASE_URL$path")
+            echo "GET $path -> HTTP $code" >> "$report"
+            if [ "$code" -lt 200 ] || [ "$code" -ge 400 ]; then fail=1; fi
           done
 
-      - name: Checkout is enabled and protected by authentication
-        shell: bash
-        run: |
-          set -euo pipefail
-          code=$(curl -sS -o /tmp/checkout -w "%{http_code}" \
+          checkout_body="$RUNNER_TEMP/checkout.txt"
+          checkout_code=$(curl -sS -o "$checkout_body" -w "%{http_code}" \
             -X POST \
             -H "content-type: application/json" \
             -d '{}' \
             "$BASE_URL/api/stripe/checkout")
-          echo "checkout -> HTTP $code"
-          cat /tmp/checkout
-          test "$code" = "401"
-          grep -q 'Authentication required' /tmp/checkout
+          echo "POST /api/stripe/checkout (unauthenticated) -> HTTP $checkout_code" >> "$report"
+          echo "Checkout response: $(tr '\n' ' ' < "$checkout_body" | head -c 300)" >> "$report"
+          if [ "$checkout_code" != "401" ] || ! grep -q 'Authentication required' "$checkout_body"; then fail=1; fi
 
-      - name: Webhook secret is configured and bad signatures are rejected
-        shell: bash
-        run: |
-          set -euo pipefail
-          code=$(curl -sS -o /tmp/webhook -w "%{http_code}" \
+          webhook_body="$RUNNER_TEMP/webhook.txt"
+          webhook_code=$(curl -sS -o "$webhook_body" -w "%{http_code}" \
             -X POST \
             -H "content-type: application/json" \
             -H "stripe-signature: t=0,v1=invalid" \
             -d '{}' \
             "$BASE_URL/api/stripe/webhook")
-          echo "webhook -> HTTP $code"
-          cat /tmp/webhook
-          test "$code" = "400"
-          grep -q 'Invalid Stripe signature' /tmp/webhook
+          echo "POST /api/stripe/webhook (invalid signature) -> HTTP $webhook_code" >> "$report"
+          echo "Webhook response: $(tr '\n' ' ' < "$webhook_body" | head -c 300)" >> "$report"
+          if [ "$webhook_code" != "400" ] || ! grep -q 'Invalid Stripe signature' "$webhook_body"; then fail=1; fi
+
+          echo >> "$report"
+          echo "overall_fail=$fail" >> "$report"
+          cat "$report"
+          echo "$fail" > "$RUNNER_TEMP/cakelio-smoke-fail.txt"
+
+      - name: Upload smoke report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cakelio-production-smoke-report
+          path: ${{ runner.temp }}/cakelio-smoke-report.txt
+          retention-days: 3
+
+      - name: Enforce smoke result
+        shell: bash
+        run: |
+          test "$(cat "$RUNNER_TEMP/cakelio-smoke-fail.txt")" = "0"
