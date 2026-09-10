@@ -1,0 +1,56 @@
+name: Production smoke test
+
+on:
+  push:
+    branches:
+      - qa/production-smoke
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    env:
+      BASE_URL: https://cakelio.netlify.app
+    steps:
+      - name: Public pages respond successfully
+        shell: bash
+        run: |
+          set -euo pipefail
+          for path in / /auth /bakers; do
+            code=$(curl -L -sS -o /tmp/page -w "%{http_code}" "$BASE_URL$path")
+            echo "$path -> HTTP $code"
+            test "$code" -ge 200
+            test "$code" -lt 400
+          done
+
+      - name: Checkout is enabled and protected by authentication
+        shell: bash
+        run: |
+          set -euo pipefail
+          code=$(curl -sS -o /tmp/checkout -w "%{http_code}" \
+            -X POST \
+            -H "content-type: application/json" \
+            -d '{}' \
+            "$BASE_URL/api/stripe/checkout")
+          echo "checkout -> HTTP $code"
+          cat /tmp/checkout
+          test "$code" = "401"
+          grep -q 'Authentication required' /tmp/checkout
+
+      - name: Webhook secret is configured and bad signatures are rejected
+        shell: bash
+        run: |
+          set -euo pipefail
+          code=$(curl -sS -o /tmp/webhook -w "%{http_code}" \
+            -X POST \
+            -H "content-type: application/json" \
+            -H "stripe-signature: t=0,v1=invalid" \
+            -d '{}' \
+            "$BASE_URL/api/stripe/webhook")
+          echo "webhook -> HTTP $code"
+          cat /tmp/webhook
+          test "$code" = "400"
+          grep -q 'Invalid Stripe signature' /tmp/webhook
